@@ -1,4 +1,6 @@
-﻿namespace Kopier;
+﻿using Kopier.Service;
+
+namespace Kopier;
 
 public static class MauiProgram
 {
@@ -13,6 +15,8 @@ public static class MauiProgram
 				fonts.AddFont("OpenSans-Semibold.ttf", "OpenSansSemibold");
 			});
 
-		return builder.Build();
+        builder.Services.AddSingleton<IAlertService, AlertService>();
+
+        return builder.Build();
 	}
 }

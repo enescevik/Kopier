@@ -1,11 +1,19 @@
-﻿namespace Kopier;
+﻿using Kopier.Service;
+
+namespace Kopier;
 
 public partial class App : Application
 {
-	public App()
-	{
-		InitializeComponent();
+    public static IServiceProvider Services;
+    public static IAlertService AlertService;
 
-		MainPage = new AppShell();
-	}
+    public App(IServiceProvider provider)
+    {
+        InitializeComponent();
+
+        Services = provider;
+        AlertService = Services.GetService<IAlertService>();
+
+        MainPage = new AppShell();
+    }
 }

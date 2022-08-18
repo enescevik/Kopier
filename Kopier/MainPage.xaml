@@ -4,7 +4,7 @@
              xmlns:local="clr-namespace:Kopier.ViewModel"
              xmlns:converters="clr-namespace:Kopier.Converters"
              x:Class="Kopier.MainPage"
-             Title="Kopier">
+             Title="">
 
     <ContentPage.BindingContext>
         <local:MainPageViewModel />
@@ -39,7 +39,7 @@
                 <ColumnDefinition Width="*" />
             </Grid.ColumnDefinitions>
             <StackLayout Grid.Column="0">
-                <Border StrokeThickness="2" Padding="16,8" StrokeShape="RoundRectangle 40,0,0,40">
+                <Border StrokeThickness="2">
                     <CollectionView ItemsSource="{Binding Queries}" IsGrouped="true" SelectionMode="Single" SelectedItem="{Binding SelectedQuery}">
                         <CollectionView.GroupHeaderTemplate>
                             <DataTemplate>
@@ -78,7 +78,7 @@
                             <Label Text="Hedef Tablo" VerticalOptions="Center" WidthRequest="120" />
                             <Entry WidthRequest="200" Text="{Binding TargetTableName}" />
                             <Label Text="Anahtar Alan(lar)" VerticalOptions="Center" WidthRequest="120" />
-                            <Entry WidthRequest="400" Text="{Binding KeyFields}" />
+                            <Entry WidthRequest="200" Text="{Binding KeyFields}" />
                         </StackLayout>
                     </StackLayout>
                 </Border>

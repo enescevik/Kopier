@@ -1,8 +1,6 @@
-﻿using System.Data;
+﻿using Newtonsoft.Json;
+using System.Data;
 using System.Data.Common;
-using System.Text.Json;
-using System.Linq;
-using Newtonsoft.Json;
 
 namespace Kopier;
 
@@ -11,6 +9,18 @@ public static class Entensions
     public static bool ToBool(this object val, bool defaultValue = false)
     {
         return val == DBNull.Value || val == null ? defaultValue : bool.Parse(val.ToString());
+    }
+
+    public static int ToInt(this object val, int defaultValue = 0)
+    {
+        try
+        {
+            return int.TryParse(val.ToString(), out var result) ? result : defaultValue;
+        }
+        catch
+        {
+            return defaultValue;
+        }
     }
 
     public static string ToSql(this IDbCommand command)

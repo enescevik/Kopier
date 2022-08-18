@@ -6,7 +6,9 @@ public abstract class ServiceBase
 {
     private IDbDataAdapter _dataAdapter;
 
-    public abstract bool TransferData(List<DataRow> rows, string targetTableName);
+    public abstract Task<int> GetCountAsync(string query);
+    public abstract Task<DataTable> GetDataAsync(string query, string keyFields = "", int skip = 0, int take = 0);
+    public abstract Task<bool> TransferDataAsync(List<DataRow> rows, string targetTableName);
 
     public Guid Id { get; private set; } = new Guid();
     public int ParallelCPU { get; set; }
@@ -21,32 +23,32 @@ public abstract class ServiceBase
         }
     }
 
-    private void SetConnectionState(bool open = true)
+    private async Task SetConnectionStateAsync(bool open = true)
     {
         if (open && DataAdapter.SelectCommand.Connection.State != ConnectionState.Open)
         {
-            DataAdapter.SelectCommand.Connection.Open();
+            await Task.Run(() => DataAdapter.SelectCommand.Connection.Open());
 
             if (ParallelCPU > 0)
             {
                 DataAdapter.SelectCommand.CommandText = $"ALTER SESSION FORCE PARALLEL QUERY PARALLEL {ParallelCPU}";
-                DataAdapter.SelectCommand.ExecuteNonQuery();
+                await Task.Run(() => DataAdapter.SelectCommand.ExecuteNonQuery());
             }
         }
         else if (!open && DataAdapter.SelectCommand.Connection.State != ConnectionState.Closed)
         {
-            DataAdapter.SelectCommand.Connection.Close();
+            await Task.Run(() => DataAdapter.SelectCommand.Connection.Close());
         }
     }
 
-    public bool HasConnection()
+    public async Task<bool> HasConnectionAsync()
     {
         try
         {
-            SetConnectionState(false);
+            await SetConnectionStateAsync(false);
 
-            DataAdapter.SelectCommand.Connection.Open();
-            DataAdapter.SelectCommand.Connection.Close();
+            await Task.Run(() => DataAdapter.SelectCommand.Connection.Open());
+            await Task.Run(() => DataAdapter.SelectCommand.Connection.Close());
 
             return true;
         }
@@ -56,14 +58,14 @@ public abstract class ServiceBase
         }
     }
 
-    public bool ExecuteNonQuery(string commandText)
+    public async Task<bool> ExecuteNonQueryAsync(string query)
     {
         try
         {
-            SetConnectionState();
-            DataAdapter.SelectCommand.CommandText = commandText;
+            await SetConnectionStateAsync();
+            DataAdapter.SelectCommand.CommandText = query;
 
-            DataAdapter.SelectCommand.ExecuteNonQuery();
+            await Task.Run(() => DataAdapter.SelectCommand.ExecuteNonQuery());
             return true;
         }
         catch
@@ -72,18 +74,18 @@ public abstract class ServiceBase
         }
         finally
         {
-            SetConnectionState(false);
+            await SetConnectionStateAsync(false);
         }
     }
 
-    public object ExecuteScalar(string commandText)
+    public async Task<object> ExecuteScalarAsync(string query)
     {
         try
         {
-            SetConnectionState();
-            DataAdapter.SelectCommand.CommandText = commandText;
+            await SetConnectionStateAsync();
+            DataAdapter.SelectCommand.CommandText = query;
 
-            return DataAdapter.SelectCommand.ExecuteScalar();
+            return await Task.Run(() => DataAdapter.SelectCommand.ExecuteScalar());
         }
         catch
         {
@@ -91,17 +93,17 @@ public abstract class ServiceBase
         }
         finally
         {
-            SetConnectionState(false);
+            await SetConnectionStateAsync(false);
         }
     }
 
-    public DataTable FillDataTable(string commandText)
+    public async Task<DataTable> FillDataTableAsync(string query)
     {
         try
         {
             var ds = new DataSet();
-            DataAdapter.SelectCommand.CommandText = commandText;
-            DataAdapter.Fill(ds);
+            DataAdapter.SelectCommand.CommandText = query;
+            await Task.Run(() => DataAdapter.Fill(ds));
 
             return ds.Tables.Count <= 0 ? new DataTable() : ds.Tables[0];
         }

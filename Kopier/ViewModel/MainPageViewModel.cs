@@ -1,6 +1,6 @@
 ﻿using Kopier.Model;
 using Kopier.Service;
-using MySqlX.XDevAPI.Common;
+using System;
 using System.ComponentModel;
 using System.Data;
 using System.Runtime.CompilerServices;
@@ -44,7 +44,7 @@ public class MainPageViewModel : INotifyPropertyChanged
             new("ExtraProduct Sorguları", new()
             {
                 new() { Name = "ExtraProduct", Source = SourceConnections[0], Target = TargetConnections[0], Database = TargetDatabases[2],
-                    TableName = "ExtraProduct", Query = @"Select
+                    TableName = "ExtraProduct", TransferLimit = 1000, KeyFields = "Id", Query = @"Select
     EP.PKExtraProductId Id,
     EP.ProductCode Code,
     EP.Name,
@@ -60,7 +60,7 @@ From STExtraProduct EP
 Inner Join STExtraProductWebSite WS On WS.FKExtraProductId = EP.PKExtraProductId And WS.IsActive = 1 And WS.FKWebSiteId = 11
 Where EP.IsActive = 1 And EP.Name Not Like '%test%' And EP.Name != 'tesetetste'" },
                 new() { Name = "ExtraProductPrice", Source = SourceConnections[0], Target = TargetConnections[0], Database = TargetDatabases[1],
-                    TableName = "ExtraProductPrice", Query = @"Select
+                    TableName = "ExtraProductPrice", TransferLimit = 1000, KeyFields = "ExtraProductId, CountryId", Query = @"Select
     FKExtraProductId ExtraProductId,
     FKCountryId CountryId,
     BuyingPrice,
@@ -76,7 +76,7 @@ Where EP.IsActive = 1 And EP.Name Not Like '%test%' And EP.Name != 'tesetetste'"
 From STExtraProductPrice
 Where FKWebSiteId = 11 And IsActive = 1 And FKCountryId In (18, 32, 51, 76)" },
                 new() { Name = "ExtraProductImage", Source = SourceConnections[0], Target = TargetConnections[0], Database = TargetDatabases[1],
-                    TableName = "ExtraProductImage", Query = @"Select
+                    TableName = "ExtraProductImage", TransferLimit = 1000, KeyFields = "ExtraProductId", Query = @"Select
     FKExtraProductId ExtraProductId,
     Image Path,
     IsActive,
@@ -87,7 +87,7 @@ Where FKWebSiteId = 11 And IsActive = 1 And FKCountryId In (18, 32, 51, 76)" },
 From STExtraProductImage
 Where FKWebSiteId = 11 And IsActive = 1" },
                 new() { Name = "ExtraProductBranch", Source = SourceConnections[0], Target = TargetConnections[0], Database = TargetDatabases[1],
-                    TableName = "ExtraProductBranch", Query = @"Select
+                    TableName = "ExtraProductBranch", TransferLimit = 1000, KeyFields = "ExtraProductId, FKBranchId", Query = @"Select
     FKExtraProductId ExtraProductId,
     FKBranchId BranchId,
     StockQuantity,
@@ -100,7 +100,7 @@ Where FKWebSiteId = 11 And IsActive = 1" },
 FROM STExtraProductBranch
 Where FKWebSiteId = 11 And IsActive = 1" },
                 new() { Name = "TercumanDBContent", Source = SourceConnections[1], Target = TargetConnections[0], Database = TargetDatabases[1],
-                    TableName = "", Query = @"Select
+                    TableName = "Content", TransferLimit = 1000, KeyFields = "ExtraProductId", Query = @"Select
     Cast(Identifier As Signed Integer) ExtraProductId,
     Case LanguageCode
         When 'ENG' Then 'EN'
@@ -125,7 +125,7 @@ Where LanguageCode In ('ENG', 'SPA', 'MEX', 'COL', 'GER')
             new("Branch", new()
             {
                 new() { Name = "BranchRegionRelation", Source = SourceConnections[0], Target = TargetConnections[0], Database = TargetDatabases[3],
-                    TableName = "BranchRegionRelation", Query = @"Select
+                    TableName = "BranchRegionRelation", TransferLimit = 1000, KeyFields = "Id", Query = @"Select
     PKBranchRegionRelationId Id,
     BR.FKBranchId BranchId,
     FKRegionId RegionId,
@@ -148,7 +148,7 @@ Where BR.IsActive = 1 And BR.FKProductGroupId = 1" }
             new("Product", new()
             {
                 new() { Name = "ProductCategory", Source = SourceConnections[0], Target = TargetConnections[0], Database = TargetDatabases[0],
-                    TableName = "ProductCategory", Query = @"Select
+                    TableName = "ProductCategory", TransferLimit = 1000, KeyFields = "PKProductGroupId", Query = @"Select
     PG.PKProductGroupId,
     PG.Name,
     PC.PKProductCategoryId,
@@ -222,6 +222,34 @@ Inner Join MTProductCategory PC on PC.Name = PG.Name" }
         }
     }
 
+    private int _transferLimit;
+    public int TransferLimit
+    {
+        get => _transferLimit;
+        set
+        {
+            if (_transferLimit != value)
+            {
+                _transferLimit = value;
+                OnPropertyChanged();
+            }
+        }
+    }
+
+    private string _keyFields;
+    public string KeyFields
+    {
+        get => _keyFields;
+        set
+        {
+            if (_keyFields != value)
+            {
+                _keyFields = value;
+                OnPropertyChanged();
+            }
+        }
+    }
+
     private string _resultQuery;
     public string ResultQuery
     {
@@ -265,7 +293,37 @@ Inner Join MTProductCategory PC on PC.Name = PG.Name" }
                 TargetConnection = _selectedQuery?.Target;
                 TargetDatabase = _selectedQuery?.Database;
                 TargetTableName = _selectedQuery?.TableName;
+                TransferLimit = _selectedQuery?.TransferLimit ?? 1000;
+                KeyFields = _selectedQuery?.KeyFields;
 
+                OnPropertyChanged();
+            }
+        }
+    }
+
+    private string _message;
+    public string Message
+    {
+        get => _message;
+        set
+        {
+            if (_message != value)
+            {
+                _message = value;
+                OnPropertyChanged();
+            }
+        }
+    }
+
+    private string _rowCount;
+    public string RowCount
+    {
+        get => _rowCount;
+        set
+        {
+            if (_rowCount != value)
+            {
+                _rowCount = value;
                 OnPropertyChanged();
             }
         }
@@ -285,15 +343,43 @@ Inner Join MTProductCategory PC on PC.Name = PG.Name" }
         }
     }
 
-    private bool _notWorking = true;
-    public bool NotWorking
+    private double _progress;
+    public double Progress
     {
-        get => _notWorking;
+        get => _progress;
         set
         {
-            if (_notWorking != value)
+            if (_progress != value)
             {
-                _notWorking = value;
+                _progress = value;
+                OnPropertyChanged();
+            }
+        }
+    }
+
+    private bool _showProgressBar;
+    public bool ShowProgressBar
+    {
+        get => _showProgressBar;
+        set
+        {
+            if (_showProgressBar != value)
+            {
+                _showProgressBar = value;
+                OnPropertyChanged();
+            }
+        }
+    }
+
+    private bool _showActivityIndicator;
+    public bool ShowActivityIndicator
+    {
+        get => _showActivityIndicator;
+        set
+        {
+            if (_showActivityIndicator != value)
+            {
+                _showActivityIndicator = value;
                 OnPropertyChanged();
             }
         }
@@ -303,23 +389,54 @@ Inner Join MTProductCategory PC on PC.Name = PG.Name" }
     public void Execute_OnSaveCommand() { }
     public void Execute_OnAddCommand() { }
     public void Execute_OnRemoveCommand() { }
-    public void Execute_OnTransferCommand()
+
+    public async void Execute_OnTransferCommand()
     {
         if (SourceConnection is not null && TargetConnection is not null)
         {
             try
             {
-                Working = true;
-                NotWorking = false;
-
                 ServiceBase sourceService = SourceConnection.Name == "bevdbtest03"
                     ? new MsSqlService(SourceConnection.ConnectionString)
                     : new MySqlService(SourceConnection.ConnectionString);
 
-                var data = sourceService.FillDataTable(EditorQuery);
+                decimal count = await sourceService.GetCountAsync(EditorQuery);
 
-                var targetService = new MySqlService($"{TargetConnection.ConnectionString}Database={TargetDatabase};");
-                targetService.TransferData(data.AsEnumerable().ToList(), TargetTableName);
+                if (count == 0)
+                {
+                    return;
+                }
+
+                if (count <= TransferLimit)
+                {
+                    Working = ShowActivityIndicator = true;
+                    Message = $"{count:N0} adet kayıt transfer ediliyor...";
+
+                    var data = await sourceService.GetDataAsync(EditorQuery);
+
+                    var targetService = new MySqlService($"{TargetConnection.ConnectionString}Database={TargetDatabase};");
+                    await targetService.TransferDataAsync(data.AsEnumerable().ToList(), TargetTableName);
+                }
+                else
+                {
+                    Working = ShowProgressBar = true;
+
+                    var skip = 0;
+                    var length = Math.Ceiling(count / TransferLimit);
+                    var targetService = new MySqlService($"{TargetConnection.ConnectionString}Database={TargetDatabase};");
+
+                    for (var i = 0; i < length; i++)
+                    {
+                        Message = $"Transfer ediliyor.. {skip + TransferLimit} -> {count}";
+                        
+                        var data = await sourceService.GetDataAsync(EditorQuery, KeyFields, skip, TransferLimit);
+
+                        await targetService.TransferDataAsync(data.AsEnumerable().ToList(), TargetTableName);
+
+                        skip += TransferLimit;
+                        Progress = 1F / (double)length * (i + 1);
+                    }
+                }
 
                 App.AlertService.ShowAlert("Transfer", "Transfer işlemi tamamlandı.");
             }
@@ -329,21 +446,40 @@ Inner Join MTProductCategory PC on PC.Name = PG.Name" }
             }
             finally
             {
-                Working = false;
-                NotWorking = true;
+                Working = ShowActivityIndicator = ShowProgressBar = false;
+                Progress = 0;
             }
         }
     }
 
-    public void Execute_OnQueryCommand()
+    public async void Execute_OnQueryCommand()
     {
         if (SourceConnection is not null && !string.IsNullOrWhiteSpace(EditorQuery))
         {
-            ServiceBase sourceService = SourceConnection.Name == "bevdbtest03"
-                ? new MsSqlService(SourceConnection.ConnectionString)
-                : new MySqlService(SourceConnection.ConnectionString);
+            try
+            {
+                Working = ShowActivityIndicator = true;
+                Message = "Sorgu çalıştırılıyor...";
 
-            ResultQuery = sourceService.FillDataTable(EditorQuery).ToJson();
+                ServiceBase sourceService = SourceConnection.Name == "bevdbtest03"
+                    ? new MsSqlService(SourceConnection.ConnectionString)
+                    : new MySqlService(SourceConnection.ConnectionString);
+
+                var count = await sourceService.GetCountAsync(EditorQuery);
+                RowCount = $"Toplam kayıt sayısı: {count:N0}";
+
+                var data = await sourceService.GetDataAsync(EditorQuery, KeyFields, 0, TransferLimit);
+
+                ResultQuery = data.ToJson();
+            }
+            catch (Exception ex)
+            {
+                App.AlertService.ShowAlert("Transfer Hata", $"{ex.Message}");
+            }
+            finally
+            {
+                Working = ShowActivityIndicator = false;
+            }
         }
     }
 

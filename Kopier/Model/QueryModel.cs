@@ -8,4 +8,6 @@ public class QueryModel
     public ConnectionModel Target { get; set; }
     public string Database { get; set; }
     public string TableName { get; set; }
+    public int TransferLimit { get; set; }
+    public string KeyFields { get; set; }
 }

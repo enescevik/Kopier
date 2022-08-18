@@ -39,7 +39,7 @@
                 <ColumnDefinition Width="*" />
             </Grid.ColumnDefinitions>
             <StackLayout Grid.Column="0">
-                <Border StrokeThickness="2">
+                <Border StrokeThickness="2" Padding="6">
                     <CollectionView ItemsSource="{Binding Queries}" IsGrouped="true" SelectionMode="Single" SelectedItem="{Binding SelectedQuery}">
                         <CollectionView.GroupHeaderTemplate>
                             <DataTemplate>
